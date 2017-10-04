@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Filter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+	<script src="js/behave.js"></script>
+</head>
+
+<body>
+    <div style="width: 1024px; height: 500px"><canvas id="myChart"></canvas></div>
+    <div id="current_dist"></div>
+    <script>
+        
+        
+        var editor = new Behave({        
+            textarea:       document.getElementById('code'),
+            replaceTab:     true,
+            softTabs:       true,
+            tabSize:        4,
+            autoOpen:       true,
+            overwrite:      true,
+            autoStrip:      true,
+            autoIndent:     true
+        });
+        BehaveHooks.add('keydown', function(data){
+            localStorage.setItem('code3', data.editor.text);
+        });
+    </script>
+    <script src="/js/socket.io.js"></script>
+    <script src="/js/filter.js"></script>
+</body>
+
+</html>
