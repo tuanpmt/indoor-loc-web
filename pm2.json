@@ -1,0 +1,22 @@
+{
+  "apps": [{
+    "name": "indoor-loc",
+    "script": "./dist/index.js",
+    "exec_interpreter": "./node_modules/.bin/babel-node",
+    "watch": false,
+    "ignore_watch": ["node_modules", "log"],
+    "watch_options": {
+      "followSymlinks": false
+    },
+    "env": {
+      "NODE_ENV": "development",
+      "--presets": "es2015,stage-0"
+    },
+    "env_production": {
+      "NODE_ENV": "production"
+    },
+    "env_staging": {
+      "NODE_ENV": "staging"
+    }
+  }]
+}

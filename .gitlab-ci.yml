@@ -1,0 +1,17 @@
+stages:
+ - deploy
+
+production_deploy_job:
+  stage: deploy
+  only:
+    - master
+  tags: 
+    - iotcore
+  cache:
+    paths:
+      - node_modules/
+  script:
+    - npm install 
+    - npm run build
+    - pm2 startOrRestart pm2.json --env production
+

@@ -18,39 +18,66 @@ var currentX = 0;
 var currentY = 0;
 
 var anchors = [];
+var tags = [];
+var tags_loc = {};
 
 var canvas;
 
 fabric.Canvas.prototype.getLocObj = function(type, data) {
-  var object = null,
-      objects = this.getObjects();
+	var object = null,
+		objects = this.getObjects();
 
-  for (var i = 0, len = this.size(); i < len; i++) {
-    if (objects[i].data && objects[i].data === data && objects[i].type && objects[i].type === type) {
-      
-      object = objects[i];
-      break;
-    }
-  }
+	for (var i = 0, len = this.size(); i < len; i++) {
+		if (objects[i].data && objects[i].data === data && objects[i].type && objects[i].type === type) {
 
-  return object;
-}
-
-function getLocation(loc0, loc1, loc2)
-{
-	//loc0.x, loc0.y, loc0.dist
-	//d0 = sqrt(pow(x-x0) + pow(y-y0))
-	//d1 = sqrt(pow(x-x1) + pow(y-y1))
-	
-}
-function resetAnchors() {
-	for(var i=0; i<anchors.length; i++) {
-		var obj = canvas.getLocObj('anchor', anchors[i].addr.toString(16));
-		if(obj) {
-			console.log('remove', obj);
-			// obj.remove();
-			canvas.remove(obj);
+			object = objects[i];
+			break;
 		}
+	}
+
+	return object;
+}
+function getAnchor(addr, dist) {
+
+	for (var i = 0; i < anchors.length; i++) {
+		if(anchors[i].addr === parseInt(addr, 16)) {
+			return {
+				x: anchors[i].x,
+				y: anchors[i].y,
+				addr: addr,
+				dist: dist
+			};
+		}
+	}
+	return null;
+}
+function getCoordinator(loc0, loc1, loc2) {
+	var a = -2 * (loc0.x - loc1.x);
+	var b = -2 * (loc0.y - loc1.y);
+	var c = -2 * (loc0.x - loc2.x);
+	var d = -2 * (loc0.y - loc2.y);
+	var e = Math.pow(loc0.dist, 2) - Math.pow(loc1.dist, 2) - Math.pow(loc0.x, 2) + Math.pow(loc1.x, 2) - Math.pow(loc0.y, 2) + Math.pow(loc1.y, 2);
+	var f = Math.pow(loc0.dist, 2) - Math.pow(loc2.dist, 2) - Math.pow(loc0.x, 2) + Math.pow(loc2.x, 2) - Math.pow(loc0.y, 2) + Math.pow(loc2.y, 2);
+
+	var x = (e * d - b * f) / (a * d - b * c);
+	var y = (a * f - c * e) / (a * d - b * c);
+	return {
+		x: x,
+		y: y
+	}
+}
+
+function resetAnchors() {
+	for (var i = 0; i < anchors.length; i++) {
+		if(anchors[i] && anchors[i].addr) {
+			var obj = canvas.getLocObj('anchor', anchors[i].addr.toString(16));
+			if (obj) {
+				console.log('remove', obj);
+				// obj.remove();
+				canvas.remove(obj);
+			}
+		}
+		
 	}
 	anchors = [];
 	canvas.renderAll();
@@ -63,9 +90,36 @@ function saveAnchors() {
 
 function loadAnchors() {
 	anchors = JSON.parse(localStorage.getItem("anchors"));
-	for(var i=0; i<anchors.length; i++) {
-		var c = translate(anchors[i].x, anchors[i].y);
-		createObject(c.x, c.y, 'anchor', anchors[i].addr.toString(16));
+	if(anchors) {
+		for (var i = 0; i < anchors.length; i++) {
+			var c = translate(anchors[i].x, anchors[i].y);
+			createObject(c.x, c.y, 'anchor', anchors[i].addr.toString(16));
+		}
+	} 
+	
+}
+
+function addAnchorIfNotExist(addr)
+{
+	var exist = false;
+	for (var i = 0; i < anchors.length; i++) {
+		// var c = translate(anchors[i].x, anchors[i].y);
+		// console.log(anchors[i].addr.toString(16) , addr.toString(16));
+		if(anchors[i].addr == addr) {
+			exist = true;
+			break;
+		}
+		
+	}
+	// console.log(exist);
+	if(!exist) {
+		var anchor = {
+			x: Math.random()*10,
+			y: Math.random()*10,
+			addr: addr
+		};
+		addObj(addr, anchor.x, anchor.y, 'anchor');
+		saveAnchors();
 	}
 }
 
@@ -161,31 +215,65 @@ function createObject(x, y, type, txt) {
 		canvas.renderAll();
 	});
 }
+
 function translate(x, y) {
 	var ret = {
-		x: x/coordinator.scaleX - coordinator.offsetX,
-		y: y/coordinator.scaleY - coordinator.offsetY
+		x: x / coordinator.scaleX - coordinator.offsetX,
+		y: y / coordinator.scaleY - coordinator.offsetY
 	}
 	return ret;
 }
+
 function addAnchorClick() {
-	addAnchor();
+	addObj();
 	saveAnchors();
 }
-function addAnchor(a, x, y) {
+
+function addObj(a, x, y, type) {
 	var addr = a || parseInt(document.getElementById('addr').value, 16);
 	var locx = x || parseFloat(document.getElementById('locx').value);
 	var locy = y || parseFloat(document.getElementById('locy').value);
-	if(addr == NaN || locx == NaN || locy == NaN)
+	var objType = type || 'anchor'
+	if (addr == NaN || locx == NaN || locy == NaN)
 		return;
-	console.log(canvas.getLocObj('anchor', addr.toString(16)));
-	for(var i=0; i<anchors.length; i++) {
-		if(anchors[i] && anchors[i].addr == addr) {
+	if(objType == 'tag') {
+		if(x == Infinity || x == -Infinity || x == NaN ||
+			y == Infinity || y == -Infinity || y == NaN) {
+			return;
+		}
+		for(var i=0; i<tags.length; i++) {
+			if(addr == tags[i].addr) {
+				var a = canvas.getLocObj(objType, addr.toString(16));
+				var coord = translate(locx, locy);
+				if(a) {
+					a.top = coord.y;
+					a.left = coord.x;
+					canvas.renderAll();
+				}
+				
+				return;
+			}
+		}
+		
+		var tag = {
+			x: locx,
+			y: locy,
+			addr: addr
+		}
+		tags.push(tag);
+		var real_coor = translate(locx, locy);
+		createObject(real_coor.x, real_coor.y, objType, addr);
+	
+		return;
+	}
+	// console.log(canvas.getLocObj('anchor', addr.toString(16)));
+	for (var i = 0; i < anchors.length; i++) {
+		if (anchors[i] && anchors[i].addr == addr) {
 			anchors[i].x = locx;
 			anchors[i].y = locy;
-			var a = canvas.getLocObj('anchor', addr.toString(16));
+			var a = canvas.getLocObj(objType, addr.toString(16));
 			var coord = translate(locx, locy);
-			if(a) {
+			if (a) {
 				a.top = coord.y;
 				a.left = coord.x;
 				canvas.renderAll();
@@ -193,10 +281,16 @@ function addAnchor(a, x, y) {
 			return;
 		}
 	}
-	var anchor = {addr: addr, x: locx, y: locy};
+	var anchor = {
+		addr: addr,
+		x: locx,
+		y: locy
+	};
 	var real_coor = translate(anchor.x, anchor.y);
 	anchors.push(anchor);
-	createObject(real_coor.x, real_coor.y, 'anchor', anchor.addr.toString(16));
+	
+	
+	createObject(real_coor.x, real_coor.y, objType, anchor.addr.toString(16));
 }
 
 function init() {
@@ -243,6 +337,19 @@ function init() {
 			document.getElementById('scaley').value = (coordinator.offsetY + currentY) * coordinator.scaleY;
 			saveCoordinator();
 		}
+		// console.log(activeType);
+		if(activeType == 'anchor') {
+			var anchor = canvas.getLocObj('anchor', options.target.data);
+			for (var i = 0; i < anchors.length; i++) {
+				if (anchors[i] && anchors[i].addr.toString(16) == options.target.data) {
+					anchors[i].x = (coordinator.offsetX + currentX) * coordinator.scaleX;
+					anchors[i].y = (coordinator.offsetY + currentY) * coordinator.scaleY;
+				}
+			}
+			// console.log(anchor, options.target.data);
+			saveAnchors();
+			
+		}
 
 	});
 	var loadFile = function(e) {
@@ -268,15 +375,62 @@ function init() {
 		}
 		reader.readAsDataURL(e.target.files[0]);
 	}
-	var socket = io('http://localhost:8080');
-
+	var socket = io(window.location.hostname + ':2222');
+	// console.log(window.location.hostname);
+	
 	socket.on('scan', function(data) {
 		// var decodedString = String.fromCharCode.apply(null, new Uint8Array(data));
 		// console.log(decodedString, data);
 		var obj = JSON.parse(data);
+		addAnchorIfNotExist(parseInt(obj.anchor, 16));
+		// var loc0 = getAnchor(obj.addr0);
+		// if(loc0) {
+		// 	loc0.dist = obj.dist0;
+		// }
 
-		console.log(obj);
+		// var loc1 = getAnchor(obj.addr1);
+		// if(loc1) {
+		// 	loc1.dist = obj.dist1;
+		// }
+
+		// var loc2 = getAnchor(obj.addr2);
+		// if(loc2) {
+		// 	loc2.dist = obj.dist2;
+		// }
+
+		// if(loc0 && loc1 && loc2) {
+		// 	var tag_loc = getCoordinator(loc0, loc1, loc2);
+		// 	console.log(tag_loc);
+		// }
+		// var tag = canvas.getLocObj('tag', obj.tag);
+		// if(tag) {
+		// 	//move
+		// } else {
+		// 	//add new
+		// }
 		
+		if(!tags_loc[obj.tag]) {
+			tags_loc[obj.tag] = {};
+		}
+		if(!tags_loc[obj.tag]['seq_' + obj.seq]) {
+			tags_loc[obj.tag]['seq_' + obj.seq] = [];
+		}
+		tags_loc[obj.tag]['seq_' + obj.seq].push({
+			anchor: getAnchor(obj.anchor, obj.dist),
+			dist: obj.dist
+		})
+		if(tags_loc[obj.tag]['seq_' + obj.seq].length >= 3) {
+			console.log(tags_loc[obj.tag]['seq_' + obj.seq]);
+			var loc = getCoordinator(
+				tags_loc[obj.tag]['seq_' + obj.seq][0].anchor, 
+				tags_loc[obj.tag]['seq_' + obj.seq][1].anchor,
+				tags_loc[obj.tag]['seq_' + obj.seq][2].anchor);
+			console.log(loc);
+			addObj(obj.tag, loc.x, loc.y, 'tag');
+			delete tags_loc[obj.tag]['seq_' + obj.seq];
+		}
+		console.log(obj);
+
 	});
 }
 
