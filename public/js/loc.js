@@ -101,7 +101,9 @@ function loadAnchors() {
 			var c = translate(anchors[i].x, anchors[i].y);
 			createObject(c.x, c.y, 'anchor', anchors[i].addr.toString(16));
 		}
-	} 
+	}  else {
+		anchors = [];
+	}
 	
 }
 
