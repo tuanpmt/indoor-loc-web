@@ -108,10 +108,11 @@ function loadAnchors() {
 function addAnchorIfNotExist(addr)
 {
 	var exist = false;
-	if(anchors == null) {
-		return;
+	var len = 0;
+	if(anchors) {
+		len = anchors.length;
 	}
-	for (var i = 0; i < anchors.length; i++) {
+	for (var i = 0; i < len; i++) {
 		// var c = translate(anchors[i].x, anchors[i].y);
 		// console.log(anchors[i].addr.toString(16) , addr.toString(16));
 		if(anchors[i].addr == addr) {
