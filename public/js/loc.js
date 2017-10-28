@@ -39,6 +39,9 @@ fabric.Canvas.prototype.getLocObj = function(type, data) {
 }
 function getAnchor(addr, dist) {
 
+	if(anchors == null) {
+		return null;
+	}
 	for (var i = 0; i < anchors.length; i++) {
 		if(anchors[i].addr === parseInt(addr, 16)) {
 			return {
@@ -68,6 +71,9 @@ function getCoordinator(loc0, loc1, loc2) {
 }
 
 function resetAnchors() {
+	if(anchors == null) {
+		return;
+	}
 	for (var i = 0; i < anchors.length; i++) {
 		if(anchors[i] && anchors[i].addr) {
 			var obj = canvas.getLocObj('anchor', anchors[i].addr.toString(16));
